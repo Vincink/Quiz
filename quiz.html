@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Bar - Style Unboared</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+        body { font-family: 'Poppins', sans-serif; background-color: #0f172a; color: #f8fafc; }
+        .neon-glow { text-shadow: 0 0 15px rgba(168, 85, 247, 0.6); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-between p-4">
+
+    <!-- En-tête -->
+    <header class="w-full max-w-4xl flex justify-between items-center py-4 border-b border-slate-800">
+        <h1 class="text-2xl font-extrabold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent neon-glow">
+            QUIZ BAR LIVE
+        </h1>
+        <div class="flex items-center gap-3">
+            <button id="modeToggle" onclick="toggleMode()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-semibold transition border border-slate-700">
+                📱 Mode : Vue TV
+            </button>
+            <button onclick="toggleSpeech()" id="speechBtn" class="p-2 bg-slate-800 hover:bg-slate-700 rounded-xl transition border border-slate-700" title="Activer/Désactiver la voix">
+                🔊
+            </button>
+        </div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="w-full max-w-4xl flex-grow flex flex-col justify-center items-center my-6">
+
+        <!-- VUE TV / HÔTE -->
+        <div id="hostView" class="w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl flex flex-col items-center text-center">
+            <div id="gameScreen" class="w-full">
+                <div class="flex justify-between w-full text-slate-400 text-sm mb-6">
+                    <span id="questionCounter">Question 1 / 3</span>
+                    <span id="timer" class="text-purple-400 font-bold text-lg">⏳ 20s</span>
+                </div>
+                
+                <h2 id="questionText" class="text-2xl md:text-3xl font-bold mb-8 min-h-[5rem] flex items-center justify-center">
+                    Chargement de la question...
+                </h2>
+
+                <div id="answersGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mb-8">
+                    <!-- Généré en JS -->
+                </div>
+
+                <div class="flex justify-center">
+                    <button onclick="nextQuestion()" id="nextBtn" class="hidden px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 font-bold rounded-2xl shadow-lg hover:opacity-90 transition">
+                        Question suivante ➔
+                    </button>
+                </div>
+            </div>
+
+            <!-- QR Code Section -->
+            <div class="mt-8 pt-6 border-t border-slate-800 w-full flex flex-col md:flex-row items-center justify-around gap-4">
+                <div class="text-left">
+                    <p class="text-sm font-semibold text-purple-400">Rejoindre la partie :</p>
+                    <p class="text-xs text-slate-400">Scanne le QR code pour jouer depuis ton téléphone.</p>
+                </div>
+                <div id="qrcode" class="bg-white p-2 rounded-xl"></div>
+            </div>
+        </div>
+
+        <!-- VUE MOBILE / MANETTE (Masqué par défaut si vue TV, ou basculable) -->
+        <div id="mobileView" class="hidden w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
+            <div class="w-full mb-6">
+                <span class="text-xs uppercase tracking-widest text-purple-400 font-bold">Manette Joueur</span>
+                <h3 class="text-xl font-bold mt-1" id="playerName">Joueur #1</h3>
+            </div>
+            
+            <div id="mobileStatus" class="w-full bg-slate-800 p-4 rounded-2xl mb-6 text-slate-300 font-medium">
+                Regarde l'écran principal pour la question !
+            </div>
+
+            <div id="mobileButtons" class="grid grid-cols-2 gap-4 w-full">
+                <!-- Boutons de manette -->
+                <button onclick="sendAnswer(0)" class="p-6 bg-red-500/20 border-2 border-red-500 rounded-2xl text-xl font-bold hover:bg-red-500 hover:text-white transition">A</button>
+                <button onclick="sendAnswer(1)" class="p-6 bg-blue-500/20 border-2 border-blue-500 rounded-2xl text-xl font-bold hover:bg-blue-500 hover:text-white transition">B</button>
+                <button onclick="sendAnswer(2)" class="p-6 bg-amber-500/20 border-2 border-amber-500 rounded-2xl text-xl font-bold hover:bg-amber-500 hover:text-white transition">C</button>
+                <button onclick="sendAnswer(3)" class="p-6 bg-emerald-500/20 border-2 border-emerald-500 rounded-2xl text-xl font-bold hover:bg-emerald-500 hover:text-white transition">D</button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const questions = [
+            {
+                q: "Quel artiste country a sorti le tube 'In Case I Can't Be There' ?",
+                options: ["Zach Top", "Chris Stapleton", "Luke Combs", "Morgan Wallen"],
+                correct: 0
+            },
+            {
+                q: "Combien de cases comporte traditionnellement un plateau de Monopoly standard ?",
+                options: ["36", "40", "48", "52"],
+                correct: 1
+            },
+            {
+                q: "Dans quel pays le jeu de cartes traditionnel 'Manille' est-il extrêmement populaire ?",
+                options: ["En Espagne", "En Belgique", "En Allemagne", "En Italie"],
+                correct: 1
+            }
+        ];
+
+        let currentQIndex = 0;
+        let speechEnabled = true;
+        let isMobileMode = false;
+        let channel = new BroadcastChannel('quiz_channel');
+
+        // Génération du QR Code pointant vers la page elle-même
+        new QRCode(document.getElementById("qrcode"), {
+            text: window.location.href + "?mobile=true",
+            width: 90,
+            height: 90
+        });
+
+        // Détection automatique si l'URL contient ?mobile=true
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mobile') === 'true') {
+                toggleMode(true);
+            } else {
+                loadQuestion();
+            }
+        };
+
+        function speak(text) {
+            if (!speechEnabled || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            let utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'fr-FR';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function toggleSpeech() {
+            speechEnabled = !speechEnabled;
+            document.getElementById('speechBtn').innerText = speechEnabled ? "🔊" : "🔇";
+        }
+
+        function toggleMode(forceMobile = false) {
+            isMobileMode = forceMobile ? true : !isMobileMode;
+            document.getElementById('hostView').classList.toggle('hidden', isMobileMode);
+            document.getElementById('mobileView').classList.toggle('hidden', !isMobileMode);
+            document.getElementById('modeToggle').innerText = isMobileMode ? "📱 Mode : Manette" : "📺 Mode : Vue TV";
+        }
+
+        function loadQuestion() {
+            if (currentQIndex >= questions.length) {
+                document.getElementById('questionText').innerText = "🎉 Partie Terminée ! Merci d'avoir joué.";
+                document.getElementById('answersGrid').innerHTML = "";
+                document.getElementById('questionCounter').innerText = "Fin du jeu";
+                document.getElementById('timer').innerText = "";
+                speak("Partie terminée ! Merci d'avoir joué.");
+                return;
+            }
+
+            let q = questions[currentQIndex];
+            document.getElementById('questionCounter').innerText = `Question ${currentQIndex + 1} / ${questions.length}`;
+            document.getElementById('questionText').innerText = q.q;
+            
+            let grid = document.getElementById('answersGrid');
+            grid.innerHTML = "";
+            q.options.forEach((opt, idx) => {
+                grid.innerHTML += `
+                    <div class="p-4 bg-slate-800 border border-slate-700 rounded-2xl text-lg font-semibold flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-purple-600/30 text-purple-400 flex items-center justify-center font-bold">${['A', 'B', 'C', 'D'][idx]}</span>
+                        ${opt}
+                    </div>
+                `;
+            });
+
+            document.getElementById('nextBtn').classList.add('hidden');
+            speak(q.q);
+
+            // Synchroniser avec les manettes connectées
+            channel.postMessage({ type: 'NEW_QUESTION', questionIndex: currentQIndex });
+        }
+
+        function sendAnswer(optionIndex) {
+            channel.postMessage({ type: 'ANSWER', answer: optionIndex });
+            document.getElementById('mobileStatus').innerText = "Réponse envoyée ! En attente des résultats...";
+        }
+
+        // Écoute des messages entre écrans (Hôte <-> Mobile)
+        channel.onmessage = (event) => {
+            if (event.data.type === 'ANSWER') {
+                // L'hôte reçoit la réponse du mobile
+                let q = questions[currentQIndex];
+                let grid = document.getElementById('answersGrid');
+                let buttons = grid.children;
+                
+                // Colorer la bonne et la mauvaise réponse
+                if(buttons[q.correct]) buttons[q.correct].classList.add('bg-emerald-600/40', 'border-emerald-500');
+                
+                document.getElementById('nextBtn').classList.remove('hidden');
+                speak("La réponse correcte a été révélée !");
+            }
+        };
+
+        function nextQuestion() {
+            currentQIndex++;
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>
